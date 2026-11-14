@@ -99,6 +99,10 @@ export const listRequirements = async (req, res, next) => {
       ItemRequirement.countDocuments(query),
     ]);
 
+    if (!mine) {
+      res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    }
+
     res.json({
       success: true,
       data: requirements,

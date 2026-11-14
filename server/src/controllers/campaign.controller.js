@@ -137,6 +137,10 @@ export const listCampaigns = async (req, res, next) => {
       daysLeft: Math.max(0, Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24))),
     }));
 
+    if (!req.user || req.user.role !== 'admin') {
+      res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    }
+
     res.json({
       success: true,
       data: enriched,
@@ -183,6 +187,8 @@ export const getCampaignById = async (req, res, next) => {
 
     const progressPercentage = Math.min(100, Math.round(((campaign.amountRaised || 0) / (campaign.goalAmount || 1)) * 100));
     const daysLeft = Math.max(0, Math.ceil((new Date(campaign.endDate) - new Date()) / (1000 * 60 * 60 * 24)));
+
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
 
     res.json({
       success: true,

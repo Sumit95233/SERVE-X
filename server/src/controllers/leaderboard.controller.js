@@ -212,6 +212,8 @@ export const getLeaderboard = async (req, res, next) => {
         donorMessage: d.donorMessage || '',
       }));
 
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+
     res.json({
       success: true,
       data: {
@@ -368,6 +370,8 @@ export const getMyLeaderboardStanding = async (req, res, next) => {
     });
 
     const user = await User.findById(userId).select('isPublicDonor emailPreferences fullName');
+
+    res.set('Cache-Control', 'private, no-cache');
 
     res.json({
       success: true,

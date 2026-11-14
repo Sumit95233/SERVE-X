@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
@@ -35,6 +36,9 @@ app.use(
     crossOriginOpenerPolicy: false,
   })
 );
+
+// High-speed gzip/deflate compression for all API responses
+app.use(compression());
 
 // CORS configuration
 const allowedOrigins = [
@@ -112,6 +116,9 @@ app.get('/api/health', (req, res) => {
 // Public impact statistics endpoint for landing and login
 app.get('/api/stats', async (req, res, next) => {
   try {
+    // Cache for 60 seconds on client and intermediate CDNs
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+
     const [verifiedNgos, successfulDonations, completedItems] = await Promise.all([
       NGO.countDocuments({ verificationStatus: 'verified' }),
       MonetaryDonation.countDocuments({ paymentStatus: 'successful' }),

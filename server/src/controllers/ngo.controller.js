@@ -3,6 +3,32 @@ import { Campaign } from '../models/Campaign.js';
 import { ItemRequirement } from '../models/ItemRequirement.js';
 import { createAuditLog } from '../services/notification.service.js';
 
+// In-memory cache for global summary stats (60s TTL) to prevent repeated heavy collection scans
+let cachedGlobalStats = null;
+let statsCachedAt = 0;
+const STATS_TTL_MS = 60 * 1000;
+
+async function getCachedGlobalStats() {
+  const now = Date.now();
+  if (cachedGlobalStats && now - statsCachedAt < STATS_TTL_MS) {
+    return cachedGlobalStats;
+  }
+  const [totalVerifiedNgos, cities, states, totalActiveCampaigns] = await Promise.all([
+    NGO.countDocuments({ verificationStatus: 'verified' }),
+    NGO.distinct('city', { verificationStatus: 'verified' }),
+    NGO.distinct('state', { verificationStatus: 'verified' }),
+    Campaign.countDocuments({ status: 'active' }),
+  ]);
+  cachedGlobalStats = {
+    totalVerifiedNgos,
+    citiesRepresented: cities.filter(Boolean).length,
+    statesRepresented: states.filter(Boolean).length || 36,
+    totalActiveCampaigns,
+  };
+  statsCachedAt = now;
+  return cachedGlobalStats;
+}
+
 export const listNGOs = async (req, res, next) => {
   try {
     const {
@@ -55,7 +81,8 @@ export const listNGOs = async (req, res, next) => {
     const limitNum = Math.min(1000, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
-    const [ngos, total, totalVerifiedNgos, citiesRepresented, statesRepresented, totalActiveCampaigns] = await Promise.all([
+    // Fast cached summary stats + concurrent query execution
+    const [ngos, total, globalStats] = await Promise.all([
       NGO.find(query)
         .select('-verificationDocuments')
         .sort(sortOption)
@@ -63,10 +90,7 @@ export const listNGOs = async (req, res, next) => {
         .limit(limitNum)
         .lean(),
       NGO.countDocuments(query),
-      NGO.countDocuments({ verificationStatus: 'verified' }),
-      NGO.distinct('city', { verificationStatus: 'verified' }).then((cities) => cities.filter(Boolean).length),
-      NGO.distinct('state', { verificationStatus: 'verified' }).then((states) => states.filter(Boolean).length),
-      Campaign.countDocuments({ status: 'active' }),
+      getCachedGlobalStats(),
     ]);
 
     // Enhance NGOs with active campaign count and urgent requirements count
@@ -96,6 +120,11 @@ export const listNGOs = async (req, res, next) => {
       enrichedNgos.sort((a, b) => (b.activeCampaignsCount || 0) - (a.activeCampaignsCount || 0));
     }
 
+    // Set fast HTTP edge & client caching headers for public searches
+    if (!req.user || req.user.role !== 'admin') {
+      res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    }
+
     res.json({
       success: true,
       data: enrichedNgos,
@@ -105,12 +134,7 @@ export const listNGOs = async (req, res, next) => {
         limit: limitNum,
         totalPages: Math.ceil(total / limitNum) || 1,
       },
-      summary: {
-        totalVerifiedNgos,
-        citiesRepresented,
-        statesRepresented: statesRepresented || 36,
-        totalActiveCampaigns,
-      },
+      summary: globalStats,
     });
   } catch (err) {
     next(err);
@@ -132,6 +156,8 @@ export const getNGOById = async (req, res, next) => {
       Campaign.find({ ngoId: ngo._id, status: 'active' }).sort({ createdAt: -1 }).limit(6),
       ItemRequirement.find({ ngoId: ngo._id, status: 'active' }).sort({ urgency: -1, createdAt: -1 }).limit(6),
     ]);
+
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
 
     res.json({
       success: true,

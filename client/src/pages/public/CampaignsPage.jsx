@@ -194,21 +194,21 @@ export const CampaignsPage = () => {
             </p>
           </div>
 
-          {/* Quick Metrics Badge */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="px-5 py-3.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl text-center min-w-[130px]">
-              <div className="text-2xl font-black text-[#07549A] tabular-nums">
+          {/* Quick Metrics Badge (Responsive Grid on Mobile) */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 w-full sm:w-auto shrink-0">
+            <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl text-center flex-1 sm:min-w-[130px]">
+              <div className="text-xl sm:text-2xl font-black text-[#07549A] tabular-nums">
                 {pagination.total || 365}
               </div>
-              <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] sm:text-[11px] font-bold text-[#64748B] uppercase tracking-wider mt-0.5">
                 Campaigns Active
               </div>
             </div>
-            <div className="px-5 py-3.5 bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl text-center min-w-[130px]">
-              <div className="text-2xl font-black text-[#065F46] tabular-nums">
+            <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-[#ECFDF5] border border-[#A7F3D0] rounded-2xl text-center flex-1 sm:min-w-[130px]">
+              <div className="text-xl sm:text-2xl font-black text-[#065F46] tabular-nums">
                 50%
               </div>
-              <div className="text-[11px] font-bold text-[#065F46] uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] sm:text-[11px] font-bold text-[#065F46] uppercase tracking-wider mt-0.5">
                 80G Tax Exemption
               </div>
             </div>

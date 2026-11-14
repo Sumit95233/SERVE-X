@@ -157,6 +157,10 @@ export const LoginPage = () => {
           const btnContainer = document.getElementById('googleSignInOfficialBtn');
           if (btnContainer) {
             btnContainer.innerHTML = '';
+            // Dynamically calculate width so it fits perfectly on any phone or desktop screen
+            const parentWidth = btnContainer.parentElement ? btnContainer.parentElement.clientWidth : (window.innerWidth - 48);
+            const responsiveWidth = Math.min(380, Math.max(220, Math.floor(parentWidth || 320)));
+
             window.google.accounts.id.renderButton(btnContainer, {
               type: 'standard',
               theme: 'outline',
@@ -164,7 +168,7 @@ export const LoginPage = () => {
               text: 'continue_with',
               shape: 'rectangular',
               logo_alignment: 'left',
-              width: 380,
+              width: responsiveWidth,
             });
           }
 
