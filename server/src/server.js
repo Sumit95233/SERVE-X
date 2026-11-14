@@ -9,8 +9,8 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await connectDB();
 
-  const server = app.listen(PORT, () => {
-    console.log(`[Serve-X Backend] Server is running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Serve-X Backend] Server is running on port ${PORT}`);
     console.log(`[Serve-X Backend] Mode: ${process.env.NODE_ENV || 'development'}`);
   });
 

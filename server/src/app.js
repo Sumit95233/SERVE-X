@@ -82,7 +82,20 @@ app.use('/api/auth/register', authLimiter);
 // Serve uploads statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check endpoint
+// Root & Health check endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    name: 'Serve-X API Server',
+    status: 'online',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
+app.head('/', (req, res) => {
+  res.status(200).end();
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
