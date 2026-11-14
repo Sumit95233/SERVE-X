@@ -29,7 +29,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Security headers
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: false,
+  })
+);
 
 // CORS configuration
 const allowedOrigins = [

@@ -1,6 +1,4 @@
 import dotenv from 'dotenv';
-dotenv.config();
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,6 +10,7 @@ import { NGO } from '../models/NGO.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 // Comprehensive coordinate lookup [lng, lat] for every district/area in India
 const DISTRICT_COORDINATES = {

@@ -106,6 +106,32 @@ export const LoginPage = () => {
     }
   }, [location.pathname]);
 
+  // Handle Google OAuth redirect return (hash fragment #id_token=...)
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.includes('id_token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const idToken = hashParams.get('id_token');
+      if (idToken) {
+        window.history.replaceState(null, '', window.location.pathname);
+        handleGoogleCredentialResponse({ credential: idToken });
+      }
+    }
+  }, []);
+
+  const triggerGoogleOAuthRedirect = () => {
+    if (!googleClientId) {
+      toast.error('Google Client ID is not configured');
+      return;
+    }
+    const origin = window.location.origin;
+    const redirectUri = `${origin}/login`;
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      googleClientId
+    )}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid%20email%20profile&nonce=${nonce}`;
+    window.location.href = googleAuthUrl;
+  };
+
   // Initialize Google Identity Services if available and configured
   useEffect(() => {
     if (!googleClientId) return;
@@ -323,9 +349,8 @@ export const LoginPage = () => {
             {/* Quote Card (English Only, No Hindi, High Contrast) */}
             <div className="bg-[rgba(11,31,51,0.88)] backdrop-blur-md border border-white/16 rounded-2xl p-6 shadow-xl relative overflow-hidden transition-all duration-300 max-w-[520px]">
               <div
-                className={`transition-opacity duration-300 ${
-                  quoteFade ? 'opacity-100' : 'opacity-0'
-                }`}
+                className={`transition-opacity duration-300 ${quoteFade ? 'opacity-100' : 'opacity-0'
+                  }`}
               >
                 <div className="text-[20px] font-semibold text-white leading-snug mb-3">
                   "{quotes[activeQuoteIdx]?.text || 'Together, we can turn compassion into action.'}"
@@ -347,9 +372,8 @@ export const LoginPage = () => {
                         setQuoteFade(true);
                       }, 150);
                     }}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      activeQuoteIdx === idx ? 'w-6 bg-[#00B98B]' : 'w-2 bg-white/30 hover:bg-white/50'
-                    }`}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${activeQuoteIdx === idx ? 'w-6 bg-[#00B98B]' : 'w-2 bg-white/30 hover:bg-white/50'
+                      }`}
                     aria-label={`Show quote ${idx + 1}`}
                   />
                 ))}
@@ -419,9 +443,8 @@ export const LoginPage = () => {
               >
                 <div className="flex items-center gap-1.5 font-bold text-sm">
                   <Heart
-                    className={`w-4 h-4 transition-colors duration-200 ${
-                      role === 'donor' ? 'text-[#07549A] fill-[#07549A]' : 'text-[#667085]'
-                    }`}
+                    className={`w-4 h-4 transition-colors duration-200 ${role === 'donor' ? 'text-[#07549A] fill-[#07549A]' : 'text-[#667085]'
+                      }`}
                   />
                   <span>Donor</span>
                 </div>
@@ -444,9 +467,8 @@ export const LoginPage = () => {
               >
                 <div className="flex items-center gap-1.5 font-bold text-sm">
                   <Building2
-                    className={`w-4 h-4 transition-colors duration-200 ${
-                      role === 'ngo' ? 'text-[#6D3FC0]' : 'text-[#667085]'
-                    }`}
+                    className={`w-4 h-4 transition-colors duration-200 ${role === 'ngo' ? 'text-[#6D3FC0]' : 'text-[#667085]'
+                      }`}
                   />
                   <span>NGO</span>
                 </div>
@@ -460,8 +482,17 @@ export const LoginPage = () => {
           {/* Google Sign-In Button */}
           <div className="mb-5 flex flex-col items-center justify-center">
             {googleClientId ? (
-              <div className="w-full flex justify-center min-h-[44px]">
-                <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
+              <div className="w-full flex flex-col items-center justify-center">
+                <div className="w-full flex justify-center min-h-[44px]">
+                  <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
+                </div>
+                <button
+                  type="button"
+                  onClick={triggerGoogleOAuthRedirect}
+                  className="mt-2 text-xs text-[#07549A] hover:text-[#003B64] hover:underline font-semibold cursor-pointer transition flex items-center gap-1"
+                >
+                  Button not responding? Tap for Direct Google Sign-In
+                </button>
               </div>
             ) : (
               <button
@@ -607,22 +638,20 @@ export const LoginPage = () => {
               <button
                 type="button"
                 onClick={() => handleQuickFill('donor@servex.org', 'Donor@123', 'donor')}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                  role === 'donor'
-                    ? 'bg-[#EAF3FF] text-[#07549A] ring-1 ring-[#07549A]'
-                    : 'bg-[#F1F5F9] text-[#475467] hover:bg-gray-100'
-                }`}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${role === 'donor'
+                  ? 'bg-[#EAF3FF] text-[#07549A] ring-1 ring-[#07549A]'
+                  : 'bg-[#F1F5F9] text-[#475467] hover:bg-gray-100'
+                  }`}
               >
                 ❤️ Donor
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickFill('goonj@servex.org', 'Ngo@123', 'ngo')}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                  role === 'ngo'
-                    ? 'bg-[#F3ECFF] text-[#6D3FC0] ring-1 ring-[#6D3FC0]'
-                    : 'bg-[#F1F5F9] text-[#475467] hover:bg-gray-100'
-                }`}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${role === 'ngo'
+                  ? 'bg-[#F3ECFF] text-[#6D3FC0] ring-1 ring-[#6D3FC0]'
+                  : 'bg-[#F1F5F9] text-[#475467] hover:bg-gray-100'
+                  }`}
               >
                 🏢 NGO
               </button>
