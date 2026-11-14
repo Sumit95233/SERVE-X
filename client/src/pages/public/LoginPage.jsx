@@ -113,11 +113,14 @@ export const LoginPage = () => {
     const renderOfficialGoogleBtn = () => {
       if (window.google?.accounts?.id) {
         try {
+          window.handleGoogleCredentialResponse = (response) => {
+            handleGoogleCredentialResponse(response);
+          };
+
           window.google.accounts.id.initialize({
             client_id: googleClientId,
-            callback: handleGoogleCredentialResponse,
+            callback: window.handleGoogleCredentialResponse,
             auto_select: false,
-            use_fedcm_for_prompt: true,
           });
 
           const btnContainer = document.getElementById('googleSignInOfficialBtn');
@@ -133,6 +136,8 @@ export const LoginPage = () => {
               width: 380,
             });
           }
+
+          window.google.accounts.id.prompt();
         } catch (err) {
           console.warn('Google Identity initialization notice', err);
         }
