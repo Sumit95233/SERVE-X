@@ -118,6 +118,7 @@ export const LoginPage = () => {
             client_id: googleClientId,
             callback: handleGoogleCredentialResponse,
             auto_select: false,
+            use_fedcm_for_prompt: true,
           });
 
           const btnContainer = document.getElementById('googleSignInOfficialBtn');
@@ -438,8 +439,17 @@ export const LoginPage = () => {
           {/* Google Sign-In Button */}
           <div className="mb-5 flex flex-col items-center justify-center">
             {googleClientId ? (
-              <div className="w-full flex justify-center min-h-[44px]">
-                <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
+              <div className="w-full flex flex-col items-center justify-center">
+                <div className="w-full flex justify-center min-h-[44px]">
+                  <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleAccountModal(true)}
+                  className="mt-2 text-xs text-[#07549A] hover:text-[#0a66c2] hover:underline font-medium cursor-pointer transition"
+                >
+                  Trouble clicking? Choose Google Account
+                </button>
               </div>
             ) : (
               <button
