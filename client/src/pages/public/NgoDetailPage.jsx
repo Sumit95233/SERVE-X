@@ -293,36 +293,27 @@ export const NgoDetailPage = () => {
                 {isNgo ? (
                   <Link
                     to="/ngo/dashboard"
-                    className="w-full sm:w-auto h-11 px-5 bg-[#059669] hover:bg-[#047857] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto h-10 px-5 bg-[#059669] hover:bg-[#047857] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Building2 className="w-4 h-4" />
                     <span>My Partner Workspace</span>
                   </Link>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDirectDonation(1000)}
-                      className="w-full sm:w-auto h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
-                    >
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span>Donate Money (₹)</span>
-                    </button>
-
                     <Link
                       to="/donor/donate-items"
-                      className="w-full sm:w-auto h-11 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto h-10 px-4 bg-[#07549A] hover:bg-[#06457E] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Package className="w-4 h-4 text-[#07549A]" />
-                      <span>Donate Items</span>
+                      <Package className="w-4 h-4" />
+                      <span>Donate Physical Items</span>
                     </Link>
 
                     {ngo.activeCampaigns && ngo.activeCampaigns.length > 0 && (
                       <a
                         href="#active-campaigns"
-                        className="w-full sm:w-auto h-11 px-3 text-[#07549A] hover:bg-blue-50 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        className="w-full sm:w-auto h-10 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5"
                       >
-                        <span>Campaigns</span>
+                        <span>View Campaigns</span>
                         <ChevronDown className="w-3.5 h-3.5" />
                       </a>
                     )}
@@ -448,26 +439,13 @@ export const NgoDetailPage = () => {
 
             {/* Active Campaigns Section */}
             <div id="active-campaigns" className="scroll-mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                    Active Fundraising Campaigns
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Direct online contributions with instant 80G tax receipt generation.
-                  </p>
-                </div>
-
-                {!isNgo && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenDirectDonation(1000)}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  >
-                    <Heart className="w-3.5 h-3.5 fill-white" />
-                    <span>Donate Money</span>
-                  </button>
-                )}
+              <div className="mb-4">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Active Fundraising Campaigns
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Direct online contributions with instant 80G tax receipt generation.
+                </p>
               </div>
 
               {!ngo.activeCampaigns || ngo.activeCampaigns.length === 0 ? (
@@ -563,8 +541,8 @@ export const NgoDetailPage = () => {
                                   onClick={() => handleOpenDirectDonation(1000, camp._id)}
                                   className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                                 >
-                                  <Heart className="w-3.5 h-3.5 fill-white" />
-                                  <span>Donate ₹</span>
+                                  <CreditCard className="w-3.5 h-3.5" />
+                                  <span>Contribute ₹</span>
                                 </button>
 
                                 <Link
@@ -735,8 +713,8 @@ export const NgoDetailPage = () => {
                     onClick={() => handleOpenDirectDonation(selectedDonationAmount)}
                     className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                   >
-                    <Heart className="w-4 h-4 fill-white" />
-                    <span>Donate ₹{selectedDonationAmount} Now</span>
+                    <span>Proceed to Donate ₹{selectedDonationAmount}</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
 
                   <div className="flex items-center justify-center gap-3 text-[10px] text-blue-200/90 pt-1">
