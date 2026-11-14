@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
 import { MonetaryDonation } from '../models/MonetaryDonation.js';
 import { User } from '../models/User.js';
+import { Campaign } from '../models/Campaign.js';
+import { NGO } from '../models/NGO.js';
 import {
   generateReceiptPdfBuffer,
   saveReceiptPdfToDisk,
@@ -392,29 +394,28 @@ export const sendDonationThankYouEmail = async (donationId) => {
       process.env.SMTP_PASS.trim() !== '' &&
       !process.env.SMTP_HOST.includes('YOUR_')
     ) {
-      const isGmail = process.env.SMTP_HOST.includes('gmail');
-      const cleanPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-      const transporter = nodemailer.createTransport(
-        isGmail
-          ? {
-              service: 'gmail',
-              auth: {
-                user: process.env.SMTP_USER,
-                pass: cleanPass,
-              },
-            }
-          : {
-              host: process.env.SMTP_HOST,
-              port: parseInt(process.env.SMTP_PORT || '587', 10),
-              secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-              auth: {
-                user: process.env.SMTP_USER,
-                pass: cleanPass,
-              },
-            }
-      );
+      const cleanPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').replace(/^"|"$/g, '');
+      const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+      const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
+      const isSecure = smtpPort === 465 || process.env.SMTP_SECURE === 'true';
 
-      console.log(`[EmailService] Attempting real SMTP email dispatch to ${recipientEmail} via ${isGmail ? 'Gmail Service' : process.env.SMTP_HOST}...`);
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: isSecure,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: cleanPass,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
+      });
+
+      console.log(`[EmailService] Attempting real SMTP email dispatch to ${recipientEmail} via ${smtpHost}:${smtpPort} (secure: ${isSecure})...`);
 
       const info = await transporter.sendMail({
         from: emailFrom,
