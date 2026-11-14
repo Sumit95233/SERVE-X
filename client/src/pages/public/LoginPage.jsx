@@ -145,8 +145,13 @@ export const LoginPage = () => {
 
           window.google.accounts.id.initialize({
             client_id: googleClientId,
-            callback: window.handleGoogleCredentialResponse,
+            callback: (resp) => {
+              console.log('[GIS Callback Triggered]', resp);
+              handleGoogleCredentialResponse(resp);
+            },
             auto_select: false,
+            itp_support: true,
+            use_fedcm_for_prompt: true,
           });
 
           const btnContainer = document.getElementById('googleSignInOfficialBtn');
@@ -482,16 +487,36 @@ export const LoginPage = () => {
           {/* Google Sign-In Button */}
           <div className="mb-5 flex flex-col items-center justify-center">
             {googleClientId ? (
-              <div className="w-full flex flex-col items-center justify-center">
+              <div className="w-full flex flex-col items-center justify-center gap-2">
                 <div className="w-full flex justify-center min-h-[44px]">
                   <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
                 </div>
                 <button
                   type="button"
                   onClick={triggerGoogleOAuthRedirect}
-                  className="mt-2 text-xs text-[#07549A] hover:text-[#003B64] hover:underline font-semibold cursor-pointer transition flex items-center gap-1"
+                  disabled={googleLoading}
+                  className="w-full h-[44px] bg-white text-[#344054] border border-[#D0D5DD] hover:border-gray-400 hover:bg-gray-50 rounded-[10px] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xs transition-all duration-200 active:scale-[0.99] cursor-pointer"
                 >
-                  Button not responding? Tap for Direct Google Sign-In
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Direct Google Sign-In</span>
+                  <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">1-Click</span>
                 </button>
               </div>
             ) : (

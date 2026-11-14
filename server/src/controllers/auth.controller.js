@@ -359,16 +359,6 @@ export const googleLogin = async (req, res, next) => {
     let user = await User.findOne({ email });
 
     if (user) {
-      // Validate role match if role was specified
-      if (role && user.role !== role) {
-        return res.status(403).json({
-          success: false,
-          message: `This account is registered as ${user.role}. Please switch to the ${user.role.toUpperCase()} tab to sign in.`,
-          code: 'ROLE_MISMATCH',
-          storedRole: user.role,
-        });
-      }
-
       if (!user.isActive) {
         return res.status(403).json({
           success: false,
