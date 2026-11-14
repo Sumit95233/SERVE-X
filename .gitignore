@@ -6,6 +6,7 @@ client/.env
 server/.env
 dist/
 uploads/
+receipts/
 server/receipts/
 .DS_Store
 *.log

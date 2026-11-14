@@ -59,6 +59,17 @@ const getCauseBadgeStyle = (causeName) => {
   }
 };
 
+const getCleanCampaignImage = (camp) => {
+  const primaryImg = camp?.images?.[0];
+  if (!primaryImg || primaryImg.includes('1573496359142') || primaryImg.includes('photo-1573496359142')) {
+    if (camp?.causeCategory?.includes('Women') || camp?.title?.includes('Women') || camp?.title?.includes('Sewing')) {
+      return 'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=800&fit=crop';
+    }
+    return 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800&fit=crop';
+  }
+  return primaryImg;
+};
+
 export const NgoDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -381,26 +392,34 @@ export const NgoDetailPage = () => {
           </div>
         </div>
 
-        {/* 3. MAIN CONTENT: 2-COLUMN LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
+        {/* 3. MAIN CONTENT: 2-COLUMN BALANCED LAYOUT */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
           {/* 3.1 Main Left Column (8 Cols) */}
           <div className="lg:col-span-8 space-y-7">
             {/* About & Mission Box */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
               <div>
-                <h3 className="text-xs font-bold text-[#07549A] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" />
-                  <span>About the Non-Profit</span>
-                </h3>
-                <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-                  {ngo.description}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-[#07549A] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-[#07549A]" />
+                    <span>About the Non-Profit</span>
+                  </h3>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Verified Organization</span>
+                  </span>
+                </div>
+                <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-normal">
+                  {ngo.description ||
+                    `Dedicated to pioneering sustainable grassroots development across ${ngo.city || 'local communities'}, ensuring equal access to dignity, basic rights, and empowerment for every vulnerable individual.`}
                 </p>
               </div>
 
               {ngo.mission && (
-                <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-50/70 to-blue-50/50 rounded-2xl border-l-4 border-emerald-500 shadow-2xs">
-                  <h4 className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider mb-1">
-                    Mission Statement
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-50/80 via-blue-50/40 to-slate-50/60 rounded-2xl border-l-4 border-emerald-500 shadow-2xs">
+                  <h4 className="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Mission Statement</span>
                   </h4>
                   <p className="text-xs sm:text-sm text-slate-700 font-medium italic leading-relaxed">
                     &ldquo;{ngo.mission}&rdquo;
@@ -408,15 +427,15 @@ export const NgoDetailPage = () => {
                 </div>
               )}
 
-              <div>
+              <div className="pt-2 border-t border-slate-100">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
                   Cause Domains & Focus Sectors
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {(ngo.causeCategories || []).map((cat, idx) => (
+                  {[...new Set(ngo.causeCategories || [primaryCause])].map((cat, idx) => (
                     <span
                       key={idx}
-                      className={`px-3 py-1 text-xs font-bold rounded-xl border shadow-2xs ${getCauseBadgeStyle(
+                      className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border shadow-2xs transition hover:scale-105 ${getCauseBadgeStyle(
                         cat
                       )}`}
                     >
@@ -443,7 +462,7 @@ export const NgoDetailPage = () => {
                   <button
                     type="button"
                     onClick={() => handleOpenDirectDonation(1000)}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                   >
                     <Heart className="w-3.5 h-3.5 fill-white" />
                     <span>Donate Money</span>
@@ -456,81 +475,93 @@ export const NgoDetailPage = () => {
                   No active fundraising campaigns at this moment. You can still support through item donations or general direct funds.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div
+                  className={`grid grid-cols-1 ${
+                    ngo.activeCampaigns.length > 1 ? 'md:grid-cols-2' : ''
+                  } gap-6`}
+                >
                   {ngo.activeCampaigns.map((camp) => {
                     const percent = Math.min(
                       100,
                       Math.round(((camp.amountRaised || 0) / (camp.goalAmount || 1)) * 100)
                     );
+                    const isSingle = ngo.activeCampaigns.length === 1;
 
                     return (
                       <div
                         key={camp._id}
-                        className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                        className={`bg-white rounded-2xl overflow-hidden border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex ${
+                          isSingle ? 'flex-col sm:flex-row' : 'flex-col'
+                        } justify-between`}
                       >
-                        <div className="relative">
+                        <div className={`relative ${isSingle ? 'sm:w-2/5 shrink-0 min-h-[220px]' : ''}`}>
                           <img
-                            src={
-                              camp.images?.[0] ||
-                              'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=600&fit=crop'
-                            }
+                            src={getCleanCampaignImage(camp)}
                             alt={camp.title}
-                            className="w-full h-40 object-cover"
+                            className={`w-full ${
+                              isSingle ? 'h-52 sm:h-full' : 'h-48'
+                            } object-cover object-center`}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src =
+                                'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=800&fit=crop';
+                            }}
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
                           <span className="absolute top-3 left-3 px-2.5 py-1 bg-white/95 backdrop-blur-xs text-[#07549A] text-[10px] font-bold rounded-full shadow-xs uppercase tracking-wider">
                             {camp.causeCategory}
                           </span>
                         </div>
 
-                        <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div className={`p-5 sm:p-6 flex-1 flex flex-col justify-between ${isSingle ? 'sm:w-3/5' : ''}`}>
                           <div>
-                            <h3 className="font-bold text-sm sm:text-base text-slate-900 mb-1.5 line-clamp-2 leading-snug">
+                            <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-2 leading-snug line-clamp-2">
                               {camp.title}
                             </h3>
-                            <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed line-clamp-3">
                               {camp.description}
                             </p>
                           </div>
 
                           <div>
-                            <div className="flex justify-between items-baseline text-xs text-slate-500 mb-1.5">
-                              <span className="font-extrabold text-emerald-600">
+                            <div className="flex justify-between items-baseline text-xs text-slate-600 mb-2">
+                              <span className="font-extrabold text-emerald-600 text-sm">
                                 ₹{(camp.amountRaised || 0).toLocaleString('en-IN')}{' '}
-                                <span className="font-normal text-slate-400">raised</span>
+                                <span className="font-normal text-slate-400 text-xs">raised</span>
                               </span>
-                              <span className="font-bold text-slate-800">
-                                Goal: ₹{camp.goalAmount?.toLocaleString('en-IN')}
+                              <span className="font-bold text-slate-800 text-xs">
+                                Goal: ₹{(camp.goalAmount || 100000).toLocaleString('en-IN')}
                               </span>
                             </div>
 
                             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
                               <div
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500"
                                 style={{ width: `${percent}%` }}
                               />
                             </div>
 
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-3 pt-1 border-t border-slate-100">
+                            <div className="flex items-center justify-between text-xs text-slate-500 mb-4 pt-1.5 border-t border-slate-100">
                               <span>
-                                <strong>{camp.donorCount || 28}</strong> supporters
+                                <strong className="text-slate-800">{camp.donorCount || 28}</strong> supporters
                               </span>
-                              <span className="text-emerald-700 font-bold">{percent}% funded</span>
+                              <span className="text-emerald-700 font-extrabold">{percent}% funded</span>
                             </div>
 
                             {isNgo ? (
                               <Link
                                 to={`/campaigns/${camp._id}`}
-                                className="w-full py-2 bg-blue-50 hover:bg-[#07549A] text-[#07549A] hover:text-white border border-blue-200 hover:border-[#07549A] text-xs font-bold rounded-xl transition text-center flex items-center justify-center gap-1"
+                                className="w-full py-2.5 bg-blue-50 hover:bg-[#07549A] text-[#07549A] hover:text-white border border-blue-200 hover:border-[#07549A] text-xs font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5"
                               >
                                 <span>View Campaign Details</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
                               </Link>
                             ) : (
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-2 gap-2.5">
                                 <button
                                   type="button"
                                   onClick={() => handleOpenDirectDonation(1000, camp._id)}
-                                  className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                                 >
                                   <Heart className="w-3.5 h-3.5 fill-white" />
                                   <span>Donate ₹</span>
@@ -538,7 +569,7 @@ export const NgoDetailPage = () => {
 
                                 <Link
                                   to={`/campaigns/${camp._id}`}
-                                  className="py-2.5 bg-[#07549A] hover:bg-[#06457E] text-white text-xs font-bold rounded-xl transition text-center flex items-center justify-center gap-1"
+                                  className="py-2.5 px-3 bg-[#07549A] hover:bg-[#06457E] text-white text-xs sm:text-sm font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5"
                                 >
                                   <span>Details</span>
                                   <ArrowRight className="w-3.5 h-3.5" />
@@ -629,8 +660,8 @@ export const NgoDetailPage = () => {
             </div>
           </div>
 
-          {/* 3.2 Right Sidebar (4 Cols) */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* 3.2 Right Sidebar (4 Cols) - Sticky Desktop */}
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 self-start">
             {/* If user is NGO: Show Organization Compliance Card */}
             {isNgo ? (
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
@@ -662,7 +693,7 @@ export const NgoDetailPage = () => {
               </div>
             ) : (
               /* For Donors and Guests: Direct Donation Terminal */
-              <div className="bg-gradient-to-br from-slate-900 via-[#07549A] to-[#0A3D6B] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+              <div className="bg-gradient-to-br from-slate-900 via-[#07549A] to-[#0A3D6B] rounded-3xl p-6 text-white shadow-xl relative overflow-hidden border border-slate-700/50">
                 <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
                 <div className="relative z-10 space-y-4">
@@ -720,77 +751,95 @@ export const NgoDetailPage = () => {
             )}
 
             {/* Official Contact & Leadership Card */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+              <h3 className="font-bold text-sm text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-[#07549A]" />
                 <span>Contact & Ground Office</span>
               </h3>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-3 text-xs">
                 {ngo.contactPerson && (
-                  <div>
-                    <div className="text-slate-400 font-semibold text-[11px] mb-0.5">
-                      Authorized Coordinator
+                  <div className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#07549A] flex items-center justify-center shrink-0 font-bold text-xs">
+                      {ngo.contactPerson.charAt(0)}
                     </div>
-                    <div className="font-bold text-slate-800 text-sm">
-                      {ngo.contactPerson}
+                    <div>
+                      <div className="text-slate-400 font-semibold text-[11px]">
+                        Authorized Coordinator
+                      </div>
+                      <div className="font-bold text-slate-800 text-sm">
+                        {ngo.contactPerson}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {ngo.phone && (
-                  <div>
-                    <div className="text-slate-400 font-semibold text-[11px] mb-0.5">
-                      Helpline / Phone
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4" />
                     </div>
-                    <a
-                      href={`tel:${ngo.phone}`}
-                      className="font-bold text-[#07549A] hover:underline flex items-center gap-1.5"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{ngo.phone}</span>
-                    </a>
+                    <div>
+                      <div className="text-slate-400 font-semibold text-[11px]">
+                        Helpline / Direct Contact
+                      </div>
+                      <a
+                        href={`tel:${ngo.phone}`}
+                        className="font-bold text-[#07549A] hover:underline"
+                      >
+                        {ngo.phone}
+                      </a>
+                    </div>
                   </div>
                 )}
 
                 {ngo.email && (
-                  <div>
-                    <div className="text-slate-400 font-semibold text-[11px] mb-0.5">
-                      Official Email
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4" />
                     </div>
-                    <a
-                      href={`mailto:${ngo.email}`}
-                      className="font-semibold text-slate-800 hover:text-[#07549A] flex items-center gap-1.5 truncate"
-                    >
-                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{ngo.email}</span>
-                    </a>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-slate-400 font-semibold text-[11px]">
+                        Official Email
+                      </div>
+                      <a
+                        href={`mailto:${ngo.email}`}
+                        className="font-semibold text-slate-800 hover:text-[#07549A] truncate block"
+                      >
+                        {ngo.email}
+                      </a>
+                    </div>
                   </div>
                 )}
 
                 {ngo.website && (
-                  <div>
-                    <div className="text-slate-400 font-semibold text-[11px] mb-0.5">
-                      Web Presence
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                      <Globe className="w-4 h-4" />
                     </div>
-                    <a
-                      href={ngo.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#07549A] hover:underline flex items-center gap-1.5 truncate"
-                    >
-                      <Globe className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{ngo.website.replace('https://', '')}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-slate-400 font-semibold text-[11px]">
+                        Web Presence
+                      </div>
+                      <a
+                        href={ngo.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#07549A] hover:underline flex items-center gap-1 truncate"
+                      >
+                        <span className="truncate">{ngo.website.replace('https://', '')}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    </div>
                   </div>
                 )}
 
                 <div className="pt-2 border-t border-slate-100">
-                  <div className="text-slate-400 font-semibold text-[11px] mb-0.5">
-                    Registered Operating Center
+                  <div className="text-slate-400 font-semibold text-[11px] mb-1 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Registered Operating Center</span>
                   </div>
-                  <div className="text-slate-600 leading-relaxed font-medium">
+                  <div className="text-slate-700 leading-relaxed font-medium pl-5 text-xs">
                     {ngo.address}, {ngo.city}, {ngo.state} - {ngo.pincode}
                   </div>
                 </div>
@@ -798,46 +847,46 @@ export const NgoDetailPage = () => {
             </div>
 
             {/* Legal & Compliance Verification Card */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+              <h3 className="font-bold text-sm text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 <span>Legal & Trust Verification</span>
               </h3>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center gap-2.5 text-emerald-800 bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center gap-3 text-emerald-800 bg-emerald-50/80 p-3 rounded-xl border border-emerald-100">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
                     <div className="font-bold">NITI Aayog NGO Darpan</div>
-                    <div className="text-[10px] text-emerald-600 font-mono">
+                    <div className="text-[11px] text-emerald-700 font-mono">
                       ID: {ngo.darpanId || 'Verified Record'}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-3 text-blue-900 bg-blue-50/80 p-3 rounded-xl border border-blue-100">
                   <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                   <div>
                     <div className="font-bold">Income Tax Section 80G</div>
-                    <div className="text-[10px] text-blue-600">
+                    <div className="text-[11px] text-blue-700">
                       50% Tax Relief on all Donations
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
-                  <CheckCircle2 className="w-4 h-4 text-slate-600 shrink-0" />
+                <div className="flex items-center gap-3 text-slate-800 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
                     <div className="font-bold">Section 12A Certified</div>
-                    <div className="text-[10px] text-slate-500">Tax Exemption Status Active</div>
+                    <div className="text-[11px] text-slate-500">Tax Exemption Status Active</div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
-                  <CheckCircle2 className="w-4 h-4 text-slate-600 shrink-0" />
+                <div className="flex items-center gap-3 text-slate-800 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
                     <div className="font-bold">Bank Account Verified</div>
-                    <div className="text-[10px] text-slate-500">Direct Gateway Settlement</div>
+                    <div className="text-[11px] text-slate-500">Direct Gateway Settlement</div>
                   </div>
                 </div>
               </div>
