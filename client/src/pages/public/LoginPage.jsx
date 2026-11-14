@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import GoogleAccountModal from '../../components/common/GoogleAccountModal';
 import {
   Heart,
   Eye,
@@ -160,18 +159,35 @@ export const LoginPage = () => {
     }
 
     setGoogleLoading(true);
-    const result = await googleLogin(response.credential, role);
-    setGoogleLoading(false);
+    const toastId = toast.loading('Signing in with Google...');
+    try {
+      const result = await googleLogin(response.credential, role);
+      setGoogleLoading(false);
+      toast.dismiss(toastId);
 
-    if (result.success) {
-      redirectAfterLogin(result.user);
-    } else if (result.code === 'NGO_REGISTRATION_REQUIRED') {
-      toast('Please complete NGO organization registration to continue.', {
-        icon: '🏢',
-      });
-      navigate(
-        `/register?type=ngo&email=${encodeURIComponent(result.data?.email || '')}&name=${encodeURIComponent(result.data?.fullName || '')}`
-      );
+      if (result.success) {
+        toast.success(`Welcome back, ${result.user.fullName}!`);
+        if (result.user.role === 'admin') {
+          window.location.href = '/admin/dashboard';
+        } else if (result.user.role === 'ngo') {
+          window.location.href = '/ngo/dashboard';
+        } else {
+          window.location.href = '/donor/dashboard';
+        }
+      } else if (result.code === 'NGO_REGISTRATION_REQUIRED') {
+        toast('Please complete NGO organization registration to continue.', {
+          icon: '🏢',
+        });
+        navigate(
+          `/register?type=ngo&email=${encodeURIComponent(result.data?.email || '')}&name=${encodeURIComponent(result.data?.fullName || '')}`
+        );
+      } else {
+        toast.error(result.message || 'Google sign-in failed');
+      }
+    } catch (err) {
+      setGoogleLoading(false);
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.message || err.message || 'Sign in failed');
     }
   };
 
@@ -223,13 +239,13 @@ export const LoginPage = () => {
   const redirectAfterLogin = (loggedInUser) => {
     const from = location.state?.from?.pathname;
     if (from && !from.includes('/unauthorized') && !from.includes('/login')) {
-      navigate(from, { replace: true });
+      window.location.href = from;
     } else if (loggedInUser.role === 'admin') {
-      navigate('/admin/dashboard', { replace: true });
+      window.location.href = '/admin/dashboard';
     } else if (loggedInUser.role === 'ngo') {
-      navigate('/ngo/dashboard', { replace: true });
+      window.location.href = '/ngo/dashboard';
     } else {
-      navigate('/donor/dashboard', { replace: true });
+      window.location.href = '/donor/dashboard';
     }
   };
 
@@ -439,17 +455,8 @@ export const LoginPage = () => {
           {/* Google Sign-In Button */}
           <div className="mb-5 flex flex-col items-center justify-center">
             {googleClientId ? (
-              <div className="w-full flex flex-col items-center justify-center">
-                <div className="w-full flex justify-center min-h-[44px]">
-                  <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleAccountModal(true)}
-                  className="mt-2 text-xs text-[#07549A] hover:text-[#0a66c2] hover:underline font-medium cursor-pointer transition"
-                >
-                  Trouble clicking? Choose Google Account
-                </button>
+              <div className="w-full flex justify-center min-h-[44px]">
+                <div id="googleSignInOfficialBtn" className="w-full flex justify-center"></div>
               </div>
             ) : (
               <button
@@ -687,18 +694,6 @@ export const LoginPage = () => {
         </div>
       )}
 
-      {/* Google Account Chooser Simulation Modal */}
-      <GoogleAccountModal
-        isOpen={showGoogleAccountModal}
-        onClose={() => setShowGoogleAccountModal(false)}
-        role={role}
-        loading={googleLoading}
-        onSelectAccount={handleSelectSimulatedGoogleAccount}
-        onOpenSetupGuide={() => {
-          setShowGoogleAccountModal(false);
-          setShowGoogleSetupModal(true);
-        }}
-      />
 
       {/* Forgot Password Modal */}
       {showForgotModal && (
