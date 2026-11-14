@@ -1,0 +1,7 @@
+/* Custom utilities and leaflet styles */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  z-index: 10;
+}
