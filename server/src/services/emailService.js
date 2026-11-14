@@ -20,6 +20,24 @@ export const escapeHtml = (unsafeText) => {
     .replace(/'/g, '&#039;');
 };
 
+// Canonical live production website URL for all user email actions
+export const PRODUCTION_CLIENT_URL = 'https://serve-x-sigma.vercel.app';
+
+/**
+ * Resolves the destination URL for interactive email buttons and links.
+ * Real emails sent to donor inboxes must ALWAYS open the live platform, never localhost.
+ */
+export const resolveEmailClientUrl = (customUrl) => {
+  if (customUrl && typeof customUrl === 'string' && customUrl.startsWith('https://') && !customUrl.includes('localhost')) {
+    return customUrl.replace(/\/+$/, '');
+  }
+  const envUrl = process.env.CLIENT_PUBLIC_URL || process.env.CLIENT_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.startsWith('https://') && !envUrl.includes('localhost')) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  return PRODUCTION_CLIENT_URL;
+};
+
 /**
  * Builds the responsive HTML and plain text email content for verified donations.
  */
@@ -43,8 +61,9 @@ export const buildThankYouEmailContent = ({
   const safeQuoteText = escapeHtml(chosenQuote.quote);
   const safeQuoteAuthor = escapeHtml(chosenQuote.author);
 
-  const donationDetailsUrl = `${clientUrl}/donor/history`;
-  const exploreCausesUrl = `${clientUrl}/campaigns`;
+  const resolvedClientUrl = resolveEmailClientUrl(clientUrl);
+  const donationDetailsUrl = `${resolvedClientUrl}/donor/history`;
+  const exploreCausesUrl = `${resolvedClientUrl}/campaigns`;
 
   const subject = 'Heartfelt Thanks from Serve-X for Your Generous Contribution!';
   const preheader = `Thank you ${safeDonorName}! Your verified donation receipt #${safeReference} is attached.`;
@@ -108,9 +127,11 @@ Contact: +91 95233 34322 | Email: ${safeSupportEmail}
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td>
-                    <span style="font-size: 28px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
-                      Serve<span style="color: #00B98B;">X</span>
-                    </span>
+                    <a href="${resolvedClientUrl}" style="text-decoration: none; color: inherit; display: inline-block;">
+                      <span style="font-size: 28px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                        Serve<span style="color: #00B98B;">X</span>
+                      </span>
+                    </a>
                     <div style="font-size: 13px; color: #94A3B8; margin-top: 4px; font-weight: 500;">
                       Bridging the Gap for Global Good
                     </div>
@@ -322,7 +343,7 @@ export const sendDonationThankYouEmail = async (donationId) => {
       month: 'short',
       year: 'numeric',
     });
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = resolveEmailClientUrl(process.env.CLIENT_PUBLIC_URL || process.env.CLIENT_URL);
     const supportEmail = process.env.EMAIL_REPLY_TO || 'sumitrajslm2018@gmail.com';
     const emailFrom = process.env.EMAIL_FROM || 'Serve-X <sumitrajslm2018@gmail.com>';
 
