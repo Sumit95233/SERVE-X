@@ -111,12 +111,16 @@ export const PortalHeader = () => {
     navigate('/login');
   };
 
-  // Dedicated NGO Partner navigation links (strictly operational, no donor map/donations)
+  // Dedicated NGO Partner navigation links (all 8 operations modules)
   const ngoNavLinks = [
-    { label: 'Workspace', path: '/ngo/dashboard', icon: LayoutDashboard },
+    { label: 'Overview', path: '/ngo/dashboard', icon: LayoutDashboard },
     { label: 'Campaigns', path: '/ngo/campaigns', icon: Flame },
     { label: 'Item Needs', path: '/ngo/requirements', icon: ClipboardList },
-    { label: 'Funds Received', path: '/ngo/donations', icon: IndianRupee },
+    { label: 'Browse Goods', path: '/ngo/items', icon: PackageSearch },
+    { label: 'Claims', path: '/ngo/claims', icon: Handshake },
+    { label: 'Donations (₹)', path: '/ngo/donations', icon: IndianRupee },
+    { label: 'Reports', path: '/ngo/reports', icon: FileBarChart2 },
+    { label: 'Profile & Darpan', path: '/ngo/profile', icon: Building2 },
   ];
 
   // Public primary navigation links (NGOs don't need NGO Locator map for donating)
@@ -187,26 +191,12 @@ export const PortalHeader = () => {
         {/* Center: Navigation Links (Customized per role for distinct experience) */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0" aria-label="Main Navigation">
           {isInsideNgoPortal ? (
-            <>
-              {ngoNavLinks.map((item) => {
-                const isActive = location.pathname === item.path || (item.path !== '/ngo/dashboard' && location.pathname.startsWith(item.path));
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={`inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all focus:outline-none focus:ring-2 focus:ring-[#84ADFF] ${
-                      isActive
-                        ? 'bg-[#ECFDF5] text-[#065F46] font-bold border border-[#A7F3D0] shadow-xs'
-                        : 'text-[#475569] hover:text-[#065F46] hover:bg-[#F0FDF4]'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#059669]' : 'text-[#64748B]'}`} />
-                    <span>{item.label}</span>
-                  </NavLink>
-                );
-              })}
-            </>
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold text-slate-800">{ngo?.organizationName || 'Partner Portal'}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-emerald-700 font-bold font-mono text-[11px]">{ngo?.darpanId ? `DARPAN: ${ngo.darpanId}` : 'Verified Entity'}</span>
+            </div>
           ) : (
             publicNavLinks.map((item) => {
               const isActive = location.pathname === item.path;
