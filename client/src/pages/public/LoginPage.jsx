@@ -53,7 +53,6 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [showGoogleAccountModal, setShowGoogleAccountModal] = useState(false);
   const [showGoogleSetupModal, setShowGoogleSetupModal] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -111,76 +110,38 @@ export const LoginPage = () => {
     roleRef.current = role;
   }, [role]);
 
-  // Handle Google OAuth redirect return (hash fragment #id_token=...)
+  // Handle Google OAuth redirect return (hash fragment #access_token=... or #id_token=...)
   useEffect(() => {
-    if (window.location.hash && window.location.hash.includes('id_token=')) {
+    if (
+      window.location.hash &&
+      (window.location.hash.includes('access_token=') || window.location.hash.includes('id_token='))
+    ) {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
       const idToken = hashParams.get('id_token');
-      if (idToken) {
-        window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', window.location.pathname);
+
+      if (accessToken) {
+        processGoogleAccessToken(accessToken);
+      } else if (idToken) {
         handleGoogleCredentialResponse({ credential: idToken });
       }
     }
   }, []);
 
-  // Initialize Google Identity Services if available and configured
+  // Listen for popup window message
   useEffect(() => {
-    if (!googleClientId) return;
-
-    const renderOfficialGoogleBtn = () => {
-      if (window.google?.accounts?.id) {
-        try {
-          window.handleGoogleCredentialResponse = (response) => {
-            handleGoogleCredentialResponse(response);
-          };
-
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: (resp) => {
-              console.log('[GIS Callback Triggered]', resp);
-              handleGoogleCredentialResponse(resp);
-            },
-            auto_select: false,
-            itp_support: true,
-            use_fedcm_for_prompt: false,
-            cancel_on_tap_outside: true,
-          });
-
-          const btnContainer = document.getElementById('googleSignInOfficialBtn');
-          if (btnContainer) {
-            btnContainer.innerHTML = '';
-            // Dynamically calculate width so it fits perfectly on any phone or desktop screen
-            const parentWidth = btnContainer.parentElement ? btnContainer.parentElement.clientWidth : (window.innerWidth - 48);
-            const responsiveWidth = Math.min(380, Math.max(220, Math.floor(parentWidth || 320)));
-
-            window.google.accounts.id.renderButton(btnContainer, {
-              type: 'standard',
-              theme: 'outline',
-              size: 'large',
-              text: 'continue_with',
-              shape: 'rectangular',
-              logo_alignment: 'left',
-              width: responsiveWidth,
-            });
-          }
-        } catch (err) {
-          console.warn('Google Identity initialization notice', err);
-        }
+    const handleAuthMessage = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === 'GOOGLE_AUTH_TOKEN' && e.data?.accessToken) {
+        processGoogleAccessToken(e.data.accessToken);
+      } else if (e.data?.type === 'GOOGLE_AUTH_CREDENTIAL' && e.data?.idToken) {
+        handleGoogleCredentialResponse({ credential: e.data.idToken });
       }
     };
-
-    if (window.google?.accounts?.id) {
-      renderOfficialGoogleBtn();
-    } else {
-      const interval = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(interval);
-          renderOfficialGoogleBtn();
-        }
-      }, 150);
-      return () => clearInterval(interval);
-    }
-  }, [googleClientId]);
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, []);
 
   const handleGoogleCredentialResponse = async (response) => {
     if (!response?.credential) {
@@ -197,14 +158,7 @@ export const LoginPage = () => {
       toast.dismiss(toastId);
 
       if (result.success) {
-        toast.success(`Welcome back, ${result.user.fullName}!`);
-        if (result.user.role === 'admin') {
-          window.location.href = '/admin/dashboard';
-        } else if (result.user.role === 'ngo') {
-          window.location.href = '/ngo/dashboard';
-        } else {
-          window.location.href = '/donor/dashboard';
-        }
+        redirectAfterLogin(result.user);
       } else if (result.code === 'NGO_REGISTRATION_REQUIRED') {
         toast('Please complete NGO organization registration to continue.', {
           icon: '🏢',
@@ -222,125 +176,104 @@ export const LoginPage = () => {
     }
   };
 
-  const handleGoogleClick = () => {
-    // If live Google Client ID is configured and GIS script is loaded, try OAuth2 token client
-    if (
-      googleClientId &&
-      googleClientId.trim() !== '' &&
-      !googleClientId.includes('your_google_client_id') &&
-      window.google?.accounts?.oauth2
-    ) {
-      try {
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'email profile openid',
-          callback: async (tokenResponse) => {
-            if (tokenResponse?.access_token) {
-              setGoogleLoading(true);
-              const toastId = toast.loading('Connecting with Google...');
-              try {
-                const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                });
-                const userInfo = await userRes.json();
-                if (userInfo?.email) {
-                  const activeRole = roleRef.current || role;
-                  const result = await googleLogin(tokenResponse.access_token, activeRole, {
-                    isSimulated: true,
-                    simulatedUser: {
-                      email: userInfo.email,
-                      fullName: userInfo.name,
-                      avatar: userInfo.picture,
-                      googleId: userInfo.sub,
-                    },
-                  });
-                  setGoogleLoading(false);
-                  toast.dismiss(toastId);
-                  if (result.success) {
-                    if (result.user.role === 'admin') window.location.href = '/admin/dashboard';
-                    else if (result.user.role === 'ngo') window.location.href = '/ngo/dashboard';
-                    else window.location.href = '/donor/dashboard';
-                  }
-                }
-              } catch (err) {
-                setGoogleLoading(false);
-                toast.dismiss(toastId);
-                console.error('UserInfo fetch failed', err);
-              }
-            }
-          },
-        });
-        tokenClient.requestAccessToken();
-        return;
-      } catch (e) {
-        console.warn('Google OAuth2 fallback', e);
-      }
-    }
+  const processGoogleAccessToken = async (accessToken) => {
+    setGoogleLoading(true);
+    const toastId = toast.loading('Connecting with Google...');
+    try {
+      const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userInfo = await userRes.json();
 
-    // Default: Open authentic Google Account Chooser Simulator (Zero Setup Needed)
-    setShowGoogleAccountModal(true);
+      if (!userInfo?.email) {
+        throw new Error('Google did not return user email');
+      }
+
+      const activeRole = roleRef.current || role;
+      const result = await googleLogin(accessToken, activeRole, {
+        profile: userInfo,
+        simulatedUser: {
+          email: userInfo.email,
+          fullName: userInfo.name || userInfo.email.split('@')[0],
+          avatar: userInfo.picture || '',
+          googleId: userInfo.sub,
+        },
+      });
+
+      setGoogleLoading(false);
+      toast.dismiss(toastId);
+
+      if (result.success) {
+        redirectAfterLogin(result.user);
+      } else if (result.code === 'NGO_REGISTRATION_REQUIRED') {
+        toast('Please complete NGO organization registration to continue.', {
+          icon: '🏢',
+        });
+        navigate(
+          `/register?type=ngo&email=${encodeURIComponent(userInfo.email)}&name=${encodeURIComponent(userInfo.name || '')}`
+        );
+      }
+    } catch (err) {
+      setGoogleLoading(false);
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.message || err.message || 'Google sign-in failed');
+    }
   };
 
-  const handleLiveGoogleOAuth = () => {
-    if (googleClientId && window.google?.accounts?.oauth2) {
+  const handleGoogleSignIn = () => {
+    if (!googleClientId) {
+      toast.error('Google Sign-In is not configured');
+      return;
+    }
+
+    // 1. Primary: Use Google Identity Services OAuth 2.0 Token Client with prompt: 'select_account'
+    // This directly opens Google's authentic browser popup (accounts.google.com) showing live Google accounts
+    if (window.google?.accounts?.oauth2) {
       try {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: googleClientId,
-          scope: 'email profile openid',
+          scope: 'openid email profile',
           prompt: 'select_account',
           callback: async (tokenResponse) => {
-            if (tokenResponse?.access_token) {
-              setGoogleLoading(true);
-              const toastId = toast.loading('Connecting with Google...');
-              try {
-                const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                });
-                const userInfo = await userRes.json();
-                if (userInfo?.email) {
-                  await handleSelectSimulatedGoogleAccount({
-                    email: userInfo.email,
-                    fullName: userInfo.name,
-                    avatar: userInfo.picture,
-                    googleId: userInfo.sub,
-                  });
-                  toast.dismiss(toastId);
-                }
-              } catch (err) {
-                setGoogleLoading(false);
-                toast.dismiss(toastId);
-                toast.error('Google profile fetch failed');
+            if (tokenResponse?.error) {
+              if (tokenResponse.error !== 'access_denied') {
+                toast.error(`Google Sign-In: ${tokenResponse.error}`);
               }
+              return;
+            }
+            if (tokenResponse?.access_token) {
+              await processGoogleAccessToken(tokenResponse.access_token);
             }
           },
         });
-        tokenClient.requestAccessToken();
-        setShowGoogleAccountModal(false);
+
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
         return;
-      } catch (e) {
-        console.warn('OAuth2 client failed', e);
+      } catch (err) {
+        console.warn('initTokenClient notice, falling back to popup', err);
       }
     }
-  };
 
-  const handleSelectSimulatedGoogleAccount = async (accountData) => {
-    setGoogleLoading(true);
-    const result = await googleLogin('sim_google_token', role, {
-      isSimulated: true,
-      simulatedUser: accountData,
-    });
-    setGoogleLoading(false);
-    setShowGoogleAccountModal(false);
+    // 2. Fallback: If window.google.accounts.oauth2 is still loading or unavailable, open official Google OAuth popup window
+    const redirectUri = window.location.origin + '/login';
+    const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      googleClientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=token%20id_token&scope=openid%20email%20profile&prompt=select_account&nonce=${Date.now()}`;
 
-    if (result.success) {
-      redirectAfterLogin(result.user);
-    } else if (result.code === 'NGO_REGISTRATION_REQUIRED') {
-      toast('Please complete NGO organization registration to continue.', {
-        icon: '🏢',
-      });
-      navigate(
-        `/register?type=ngo&email=${encodeURIComponent(result.data?.email || '')}&name=${encodeURIComponent(result.data?.fullName || '')}`
-      );
+    const width = 500;
+    const height = 650;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    const popup = window.open(
+      oauthUrl,
+      'GoogleOAuthWindow',
+      `width=${width},height=${height},left=${left},top=${top},status=no,toolbar=no,menubar=no`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      window.location.href = oauthUrl;
     }
   };
 
@@ -560,12 +493,12 @@ export const LoginPage = () => {
           <div className="mb-5 flex flex-col items-center justify-center">
             <button
               type="button"
-              onClick={() => setShowGoogleAccountModal(true)}
+              onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full h-[48px] bg-white text-[#344054] border border-[#D0D5DD] hover:border-gray-400 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 shadow-xs hover:bg-gray-50 transition-all duration-200 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="w-full h-[48px] bg-white text-[#1f1f1f] border border-[#dadce0] hover:bg-[#F8FAFD] hover:border-[#4285F4]/40 hover:shadow-xs rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {googleLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
               ) : (
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -740,133 +673,6 @@ export const LoginPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Google Authentic Account Chooser Dialog */}
-      {showGoogleAccountModal && (
-        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200/90 relative animate-in fade-in zoom-in-95 duration-150">
-            {/* Header: Google Logo & Title */}
-            <div className="text-center pb-4 mb-4 border-b border-slate-100">
-              <svg className="w-7 h-7 mx-auto mb-2.5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/>
-                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-              </svg>
-              <h3 className="font-bold text-lg text-slate-900">
-                Choose an account
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                to continue to <span className="font-semibold text-slate-700">Serve-X</span> as <span className="font-bold uppercase tracking-wider text-emerald-700">{role}</span>
-              </p>
-            </div>
-
-            {/* List of Accounts */}
-            <div className="space-y-2 mb-4">
-              {/* Account 1: Sumit Raj */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleSelectSimulatedGoogleAccount({
-                    fullName: 'SUMIT RAJ',
-                    email: 'dynamiteg067@gmail.com',
-                    avatar: 'https://lh3.googleusercontent.com/a/ACg8ocKQyG-G9P0h0f6M2y_N1qWq=s96-c',
-                    googleId: 'google_104928374829103948572',
-                  })
-                }
-                className="w-full p-3 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-slate-50 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs ring-2 ring-blue-500/20">
-                    SR
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 truncate">
-                      SUMIT RAJ
-                    </div>
-                    <div className="text-xs text-slate-500 truncate">
-                      dynamiteg067@gmail.com
-                    </div>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Signed in</span>
-                </span>
-              </button>
-
-              {/* Account 2: Sumit Raj (Secondary / Work) */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleSelectSimulatedGoogleAccount({
-                    fullName: 'Sumit Raj (Support)',
-                    email: 'sumitrajslm2018@gmail.com',
-                    avatar: '',
-                    googleId: 'google_204928374829103948573',
-                  })
-                }
-                className="w-full p-3 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-slate-50 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                    SR
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 truncate">
-                      Sumit Raj
-                    </div>
-                    <div className="text-xs text-slate-500 truncate">
-                      sumitrajslm2018@gmail.com
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[11px] text-slate-400 font-medium shrink-0">
-                  Available
-                </span>
-              </button>
-
-              {/* Account 3: Use official Google OAuth Popup window */}
-              <button
-                type="button"
-                onClick={handleLiveGoogleOAuth}
-                className="w-full p-3 rounded-2xl border border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 transition-all text-left flex items-center gap-3 group cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/>
-                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-sm text-slate-800">
-                    Use another Google account
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Open official Google popup window
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Privacy Footnote & Close */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-400">
-                Encrypted with 256-bit SSL
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowGoogleAccountModal(false)}
-                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Google Setup Guide Modal */}
       {showGoogleSetupModal && (

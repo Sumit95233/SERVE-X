@@ -75,12 +75,16 @@ export const AuthProvider = ({ children }) => {
       const payload = {
         credential: credential || 'sim_google_token',
         role: selectedRole,
+        ...extra,
       };
+      if (extra?.profile) {
+        payload.profile = extra.profile;
+      }
+      if (extra?.simulatedUser) {
+        payload.simulatedUser = extra.simulatedUser;
+      }
       if (extra?.isSimulated) {
         payload.isSimulated = true;
-        if (extra.simulatedUser) {
-          payload.simulatedUser = extra.simulatedUser;
-        }
       }
       const res = await api.post('/auth/google', payload);
       if (res.data?.code === 'NGO_REGISTRATION_REQUIRED') {
