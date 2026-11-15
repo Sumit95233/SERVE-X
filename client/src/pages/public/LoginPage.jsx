@@ -121,6 +121,25 @@ export const LoginPage = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const idToken = hashParams.get('id_token');
+
+      // If opened inside popup window, transmit credentials to parent and auto-close
+      if (window.opener && !window.opener.closed) {
+        try {
+          window.opener.postMessage(
+            {
+              type: 'GOOGLE_AUTH_TOKEN',
+              accessToken,
+              idToken,
+            },
+            window.location.origin
+          );
+          window.close();
+          return;
+        } catch (e) {
+          console.error('Failed to notify opener window:', e);
+        }
+      }
+
       window.history.replaceState(null, '', window.location.pathname);
 
       if (accessToken) {
@@ -131,7 +150,7 @@ export const LoginPage = () => {
     }
   }, []);
 
-  // Listen for popup window message
+  // Listen for credentials from popup window
   useEffect(() => {
     const handleAuthMessage = (e) => {
       if (e.origin !== window.location.origin) return;
@@ -232,38 +251,8 @@ export const LoginPage = () => {
       return;
     }
 
-    // 1. Primary: Use Google Identity Services OAuth 2.0 Token Client with prompt: 'select_account'
-    // This directly opens Google's authentic browser popup (accounts.google.com) showing live Google accounts
-    if (window.google?.accounts?.oauth2) {
-      try {
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: activeClientId,
-          scope: 'openid email profile',
-          prompt: 'select_account',
-          callback: async (tokenResponse) => {
-            if (tokenResponse?.error) {
-              console.warn('[Google OAuth Error]', tokenResponse);
-              if (tokenResponse.error === 'access_denied') {
-                toast.error('Google Sign-In was cancelled or access denied.');
-              } else {
-                toast.error(`Google Sign-In: ${tokenResponse.error}`);
-              }
-              return;
-            }
-            if (tokenResponse?.access_token) {
-              await processGoogleAccessToken(tokenResponse.access_token);
-            }
-          },
-        });
-
-        tokenClient.requestAccessToken({ prompt: 'select_account' });
-        return;
-      } catch (err) {
-        console.warn('initTokenClient notice, falling back to popup', err);
-      }
-    }
-
-    // 2. Fallback: If window.google.accounts.oauth2 is still loading or unavailable, open official Google OAuth popup window
+    // Direct authentic Google OAuth 2.0 Popup Window
+    // Opens official accounts.google.com window with prompt: 'select_account'
     const redirectUri = window.location.origin + '/login';
     const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
       activeClientId
@@ -275,6 +264,7 @@ export const LoginPage = () => {
     const height = 650;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
+
     const popup = window.open(
       oauthUrl,
       'GoogleOAuthWindow',
@@ -282,7 +272,10 @@ export const LoginPage = () => {
     );
 
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // If browser blocked popup, smoothly redirect to Google OAuth
       window.location.href = oauthUrl;
+    } else {
+      popup.focus();
     }
   };
 
