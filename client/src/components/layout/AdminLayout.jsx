@@ -35,7 +35,7 @@ export const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F9FC] w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-transparent w-full max-w-full overflow-x-hidden">
       <header className="sticky top-0 z-50 bg-[#101828] text-white border-b border-gray-800 shadow-md w-full max-w-full overflow-x-clip">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -68,6 +68,36 @@ const getCleanCampaignImage = (camp) => {
   return primaryImg;
 };
 
+// Authentic, high-resolution thematic cover photography for verified causes
+const getCauseCoverImage = (cause, customCover) => {
+  if (customCover && typeof customCover === 'string' && customCover.trim()) return customCover;
+  switch (cause) {
+    case 'Disaster Relief':
+      return 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1600&auto=format&fit=crop&q=80';
+    case 'Education':
+      return 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1600&auto=format&fit=crop&q=80';
+    case 'Healthcare':
+      return 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=1600&auto=format&fit=crop&q=80';
+    case 'Hunger Relief':
+      return 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1600&auto=format&fit=crop&q=80';
+    case 'Child Welfare':
+      return 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1600&auto=format&fit=crop&q=80';
+    case 'Women Empowerment':
+      return 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=1600&auto=format&fit=crop&q=80';
+    case 'Elderly Care':
+      return 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1600&auto=format&fit=crop&q=80';
+    case 'Animal Welfare':
+      return 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=1600&auto=format&fit=crop&q=80';
+    case 'Clothing & Dignity':
+      return 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1600&auto=format&fit=crop&q=80';
+    case 'Community Development':
+    case 'Rural & Village Development':
+      return 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=1600&auto=format&fit=crop&q=80';
+    default:
+      return 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=1600&auto=format&fit=crop&q=80';
+  }
+};
+
 export const NgoDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -153,7 +183,7 @@ export const NgoDetailPage = () => {
   const beneficiariesText = ngo.beneficiariesSupported || '12,500+ Lives Impacted';
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] py-6 sm:py-9 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen py-6 sm:py-9 w-full max-w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full space-y-6">
         {/* 1. TOP BREADCRUMB & SHARE BAR */}
         <div className="flex items-center justify-between">
@@ -184,11 +214,18 @@ export const NgoDetailPage = () => {
         </div>
 
         {/* 2. HERO ORGANIZATION PROFILE CARD */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_4px_24px_rgba(15,23,42,0.04)] overflow-hidden">
-          {/* 2.1 Top Thematic Cover Banner */}
-          <div className="h-36 sm:h-44 w-full bg-gradient-to-r from-slate-900 via-[#07549A] to-[#1E3A8A] relative p-4 sm:p-6 flex items-start justify-between">
-            {/* Subtle decorative glow */}
-            <div className="absolute top-0 right-0 w-80 h-full bg-white/10 blur-3xl pointer-events-none" />
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_8px_30px_rgba(15,23,42,0.06)] overflow-hidden">
+          {/* 2.1 Top Thematic Cover Banner with Rich Photography & Dark Cinematic Gradient */}
+          <div className="h-44 sm:h-56 w-full relative overflow-hidden p-4 sm:p-6 flex items-start justify-between">
+            {/* Authentic Photographic Cover */}
+            <img
+              src={getCauseCoverImage(primaryCause, ngo.coverImage)}
+              alt={`${ngo.organizationName} cover banner`}
+              className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.75] contrast-[1.08] transition-transform duration-700 hover:scale-105"
+            />
+            {/* Subtle Gradient Overlays for High Contrast & Visual Depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-900/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-transparent to-[#07549A]/30" />
 
             <div className="relative z-10 flex flex-wrap items-center gap-2">
               <span
@@ -198,13 +235,13 @@ export const NgoDetailPage = () => {
               >
                 {primaryCause}
               </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white backdrop-blur-md border border-white/20">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-md border border-white/25 shadow-xs">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Verified Entity</span>
               </span>
             </div>
 
-            <div className="relative z-10 hidden sm:flex items-center gap-1 text-xs font-medium text-white/90 bg-black/25 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+            <div className="relative z-10 hidden sm:flex items-center gap-1.5 text-xs font-medium text-white/95 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 shadow-xs">
               <MapPin className="w-3.5 h-3.5 text-blue-300" />
               <span>
                 {ngo.city ? `${ngo.city}, ${ngo.state}` : ngo.state || 'India'}

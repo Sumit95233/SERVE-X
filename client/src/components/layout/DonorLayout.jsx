@@ -5,7 +5,7 @@ import { Footer } from '../common/Footer';
 
 export const DonorLayout = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F7FB] w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-transparent w-full max-w-full overflow-x-hidden">
       {/* Exactly ONE Primary Top Navigation Header */}
       <PortalHeader />
 
