@@ -152,7 +152,7 @@ export const PortalHeader = () => {
         {/* Left Section: Brand Logo & Role Badge */}
         <div className="flex items-center gap-2.5 shrink-0">
           <Link
-            to={isAuthenticated ? getDashboardPath() : '/home'}
+            to={isAuthenticated ? getDashboardPath() : '/login'}
             className="inline-flex items-center gap-2 group focus:outline-none focus:ring-2 focus:ring-[#84ADFF] rounded-[10px]"
             aria-label="Serve-X Home"
           >
@@ -189,34 +189,36 @@ export const PortalHeader = () => {
           )}
         </div>
 
-        {/* Center: Navigation Links (Customized per role for distinct experience) */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0" aria-label="Main Navigation">
-          {isInsideNgoPortal ? (
-            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold text-slate-800">{ngo?.organizationName || 'Partner Portal'}</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-emerald-700 font-bold font-mono text-[11px]">{ngo?.darpanId ? `DARPAN: ${ngo.darpanId}` : 'Verified Entity'}</span>
-            </div>
-          ) : (
-            publicNavLinks.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={`px-2.5 xl:px-3 py-1.5 rounded-[10px] text-xs font-semibold whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-[#84ADFF] ${
-                    isActive
-                      ? 'bg-[#EAF3FF] text-[#07549A] font-bold'
-                      : 'text-[#526780] hover:text-[#102033] hover:bg-[#F3F7FB]'
-                  }`}
-                >
-                  {item.label}
-                </NavLink>
-              );
-            })
-          )}
-        </nav>
+        {/* Center: Navigation Links (Customized per role, only displayed for authenticated members) */}
+        {isAuthenticated && (
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0" aria-label="Main Navigation">
+            {isInsideNgoPortal ? (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-slate-800">{ngo?.organizationName || 'Partner Portal'}</span>
+                <span className="text-slate-300">•</span>
+                <span className="text-emerald-700 font-bold font-mono text-[11px]">{ngo?.darpanId ? `DARPAN: ${ngo.darpanId}` : 'Verified Entity'}</span>
+              </div>
+            ) : (
+              publicNavLinks.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={`px-2.5 xl:px-3 py-1.5 rounded-[10px] text-xs font-semibold whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-[#84ADFF] ${
+                      isActive
+                        ? 'bg-[#EAF3FF] text-[#07549A] font-bold'
+                        : 'text-[#526780] hover:text-[#102033] hover:bg-[#F3F7FB]'
+                    }`}
+                  >
+                    {item.label}
+                  </NavLink>
+                );
+              })
+            )}
+          </nav>
+        )}
 
         {/* Right Section: User Controls or Sign In */}
         <div className="hidden sm:flex items-center gap-2 xl:gap-2.5 shrink-0">
@@ -472,34 +474,36 @@ export const PortalHeader = () => {
         {/* Mobile menu trigger */}
         <div className="lg:hidden flex items-center gap-2">
           {isAuthenticated ? (
-            <Link
-              to={getDashboardPath()}
-              className="text-xs font-semibold px-2.5 py-1.5 bg-[#07549A] text-white rounded-lg"
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                to={getDashboardPath()}
+                className="text-xs font-semibold px-2.5 py-1.5 bg-[#07549A] text-white rounded-lg"
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-1.5 text-[#526780] hover:text-[#102033] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84ADFF]"
+                aria-label="Toggle Navigation Menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </>
           ) : (
             <Link
               to="/login"
-              className="text-xs font-bold px-3 py-1.5 bg-[#07549A] text-white rounded-lg"
+              className="text-xs font-bold px-3.5 py-1.5 bg-[#07549A] hover:bg-[#06457E] text-white rounded-xl shadow-xs"
             >
               Sign In
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 text-[#526780] hover:text-[#102033] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84ADFF]"
-            aria-label="Toggle Navigation Menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
+      {/* Mobile Drawer (Only for authenticated members) */}
+      {isAuthenticated && mobileMenuOpen && (
         <div className="lg:hidden border-t border-[#DFE7F0] bg-white px-4 pt-3 pb-6 space-y-2 animate-in slide-in-from-top-2 duration-150">
           {isAuthenticated && (
             <div className="px-3 py-2 border-b border-[#DFE7F0] mb-2 flex items-center justify-between">
