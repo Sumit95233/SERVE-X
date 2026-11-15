@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   History,
   Package,
+  PackageSearch,
   IndianRupee,
   Flame,
   ClipboardList,
