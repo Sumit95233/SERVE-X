@@ -89,7 +89,17 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <NotificationProvider>
-          <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 1800,
+              style: {
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500',
+              },
+            }}
+          />
           <Suspense
             fallback={
               <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F8FC] gap-3">
