@@ -84,7 +84,9 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleClientId =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    '983935911291-p7isda7hir84cue1t4t3lh886m00i0nf.apps.googleusercontent.com';
 
   // Rotate English quotation with subtle fade transition every 6 seconds
   useEffect(() => {
@@ -221,7 +223,11 @@ export const LoginPage = () => {
   };
 
   const handleGoogleSignIn = () => {
-    if (!googleClientId) {
+    const activeClientId =
+      googleClientId ||
+      '983935911291-p7isda7hir84cue1t4t3lh886m00i0nf.apps.googleusercontent.com';
+
+    if (!activeClientId) {
       toast.error('Google Sign-In is not configured');
       return;
     }
@@ -231,12 +237,15 @@ export const LoginPage = () => {
     if (window.google?.accounts?.oauth2) {
       try {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
+          client_id: activeClientId,
           scope: 'openid email profile',
           prompt: 'select_account',
           callback: async (tokenResponse) => {
             if (tokenResponse?.error) {
-              if (tokenResponse.error !== 'access_denied') {
+              console.warn('[Google OAuth Error]', tokenResponse);
+              if (tokenResponse.error === 'access_denied') {
+                toast.error('Google Sign-In was cancelled or access denied.');
+              } else {
                 toast.error(`Google Sign-In: ${tokenResponse.error}`);
               }
               return;
@@ -257,7 +266,7 @@ export const LoginPage = () => {
     // 2. Fallback: If window.google.accounts.oauth2 is still loading or unavailable, open official Google OAuth popup window
     const redirectUri = window.location.origin + '/login';
     const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-      googleClientId
+      activeClientId
     )}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=token%20id_token&scope=openid%20email%20profile&prompt=select_account&nonce=${Date.now()}`;
