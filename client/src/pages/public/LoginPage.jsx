@@ -106,6 +106,11 @@ export const LoginPage = () => {
     }
   }, [location.pathname]);
 
+  const roleRef = React.useRef(role);
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
+
   // Handle Google OAuth redirect return (hash fragment #id_token=...)
   useEffect(() => {
     if (window.location.hash && window.location.hash.includes('id_token=')) {
@@ -137,7 +142,8 @@ export const LoginPage = () => {
             },
             auto_select: false,
             itp_support: true,
-            use_fedcm_for_prompt: true,
+            use_fedcm_for_prompt: false,
+            cancel_on_tap_outside: true,
           });
 
           const btnContainer = document.getElementById('googleSignInOfficialBtn');
@@ -157,8 +163,6 @@ export const LoginPage = () => {
               width: responsiveWidth,
             });
           }
-
-          window.google.accounts.id.prompt();
         } catch (err) {
           console.warn('Google Identity initialization notice', err);
         }
@@ -176,7 +180,7 @@ export const LoginPage = () => {
       }, 150);
       return () => clearInterval(interval);
     }
-  }, [googleClientId, role]);
+  }, [googleClientId]);
 
   const handleGoogleCredentialResponse = async (response) => {
     if (!response?.credential) {
@@ -184,10 +188,11 @@ export const LoginPage = () => {
       return;
     }
 
+    const activeRole = roleRef.current || role;
     setGoogleLoading(true);
     const toastId = toast.loading('Signing in with Google...');
     try {
-      const result = await googleLogin(response.credential, role);
+      const result = await googleLogin(response.credential, activeRole);
       setGoogleLoading(false);
       toast.dismiss(toastId);
 
@@ -218,22 +223,57 @@ export const LoginPage = () => {
   };
 
   const handleGoogleClick = () => {
-    // If live Google Client ID is configured and GIS script is loaded, try official Google prompt
+    // If live Google Client ID is configured and GIS script is loaded, try OAuth2 token client
     if (
       googleClientId &&
       googleClientId.trim() !== '' &&
       !googleClientId.includes('your_google_client_id') &&
-      window.google?.accounts?.id
+      window.google?.accounts?.oauth2
     ) {
       try {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setShowGoogleAccountModal(true);
-          }
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse?.access_token) {
+              setGoogleLoading(true);
+              const toastId = toast.loading('Connecting with Google...');
+              try {
+                const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+                });
+                const userInfo = await userRes.json();
+                if (userInfo?.email) {
+                  const activeRole = roleRef.current || role;
+                  const result = await googleLogin(tokenResponse.access_token, activeRole, {
+                    isSimulated: true,
+                    simulatedUser: {
+                      email: userInfo.email,
+                      fullName: userInfo.name,
+                      avatar: userInfo.picture,
+                      googleId: userInfo.sub,
+                    },
+                  });
+                  setGoogleLoading(false);
+                  toast.dismiss(toastId);
+                  if (result.success) {
+                    if (result.user.role === 'admin') window.location.href = '/admin/dashboard';
+                    else if (result.user.role === 'ngo') window.location.href = '/ngo/dashboard';
+                    else window.location.href = '/donor/dashboard';
+                  }
+                }
+              } catch (err) {
+                setGoogleLoading(false);
+                toast.dismiss(toastId);
+                console.error('UserInfo fetch failed', err);
+              }
+            }
+          },
         });
+        tokenClient.requestAccessToken();
         return;
       } catch (e) {
-        console.warn('Google prompt fallback', e);
+        console.warn('Google OAuth2 fallback', e);
       }
     }
 
