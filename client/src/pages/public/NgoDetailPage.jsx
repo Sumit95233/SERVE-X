@@ -13,8 +13,6 @@ import {
   Package,
   Heart,
   Clock,
-  Globe,
-  ExternalLink,
   Award,
   CheckCircle2,
   FileCheck2,
@@ -785,28 +783,6 @@ export const NgoDetailPage = () => {
                         className="font-semibold text-slate-800 hover:text-[#07549A] truncate block"
                       >
                         {ngo.email}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {ngo.website && (
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
-                    <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-slate-400 font-semibold text-[11px]">
-                        Web Presence
-                      </div>
-                      <a
-                        href={ngo.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-[#07549A] hover:underline flex items-center gap-1 truncate"
-                      >
-                        <span className="truncate">{ngo.website.replace('https://', '')}</span>
-                        <ExternalLink className="w-3 h-3 shrink-0" />
                       </a>
                     </div>
                   </div>
