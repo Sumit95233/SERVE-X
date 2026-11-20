@@ -303,11 +303,8 @@ export const sendDonationThankYouEmail = async (donationId) => {
 
     const idempotencyKey = `email_receipt_${donation.receiptNumber || donation._id}`;
 
-    // Idempotency check: don't duplicate if already sent or simulated
-    if (
-      donation.emailDeliveryStatus === 'sent' ||
-      donation.emailDeliveryStatus === 'simulated'
-    ) {
+    // Idempotency check: don't duplicate if already sent
+    if (donation.emailDeliveryStatus === 'sent') {
       return {
         success: true,
         status: donation.emailDeliveryStatus,
@@ -326,7 +323,7 @@ export const sendDonationThankYouEmail = async (donationId) => {
       }
     }
 
-    const recipientEmail = donation.donorEmail;
+    const recipientEmail = (donation.donorEmail || donation.donorId?.email || '').trim();
     if (!recipientEmail || !recipientEmail.includes('@')) {
       donation.emailDeliveryStatus = 'failed';
       donation.emailError = 'Invalid recipient email address';
@@ -344,8 +341,14 @@ export const sendDonationThankYouEmail = async (donationId) => {
       year: 'numeric',
     });
     const clientUrl = resolveEmailClientUrl(process.env.CLIENT_PUBLIC_URL || process.env.CLIENT_URL);
-    const supportEmail = process.env.EMAIL_REPLY_TO || 'sumitrajslm2018@gmail.com';
-    const emailFrom = process.env.EMAIL_FROM || 'Serve-X <sumitrajslm2018@gmail.com>';
+    const smtpHost = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
+    const isSecure = smtpPort === 465 || process.env.SMTP_SECURE === 'true';
+    const smtpUser = (process.env.SMTP_USER || 'dynamiteg067@gmail.com').trim();
+    const rawPass = process.env.SMTP_PASS || 'vroz iivf pxmi ddxt';
+    const cleanPass = rawPass ? rawPass.replace(/\s+/g, '').replace(/^"|"$/g, '') : '';
+    const emailFrom = (process.env.EMAIL_FROM || '').replace(/^"|"$/g, '').trim() || `Serve-X <${smtpUser}>`;
+    const supportEmail = (process.env.EMAIL_REPLY_TO || '').replace(/^"|"$/g, '').trim() || 'sumitrajslm2018@gmail.com';
 
     // Select inspirational quote
     const chosenQuote = INSPIRATIONAL_QUOTES[Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length)];
@@ -361,9 +364,21 @@ export const sendDonationThankYouEmail = async (donationId) => {
       quoteObj: chosenQuote,
     });
 
-    // 1. GENERATE OFFICIAL SECTION 80G RECEIPT PDF BUFFER & SAVE COPY TO DISK
-    const { filePath, filename, buffer: pdfBuffer } = await saveReceiptPdfToDisk(donation);
-    donation.receiptPdfPath = filePath;
+    // 1. GENERATE OFFICIAL SECTION 80G RECEIPT PDF BUFFER
+    let pdfBuffer = null;
+    let filename = `ServeX_Receipt_${donation.receiptNumber || donation._id}.pdf`;
+    let filePath = null;
+
+    try {
+      const saved = await saveReceiptPdfToDisk(donation);
+      filePath = saved.filePath;
+      filename = saved.filename;
+      pdfBuffer = saved.buffer;
+      donation.receiptPdfPath = filePath;
+    } catch (pdfDiskErr) {
+      console.warn('[EmailService] Local disk write notice, using in-memory PDF buffer:', pdfDiskErr.message);
+      pdfBuffer = await generateReceiptPdfBuffer(donation);
+    }
 
     let deliveryId = null;
     let deliveryStatus = 'pending';
@@ -408,24 +423,13 @@ export const sendDonationThankYouEmail = async (donationId) => {
       deliveryStatus = 'sent';
     }
     // Provider check 2: SMTP Transport via Nodemailer
-    else if (
-      process.env.SMTP_HOST &&
-      process.env.SMTP_HOST.trim() !== '' &&
-      process.env.SMTP_PASS &&
-      process.env.SMTP_PASS.trim() !== '' &&
-      !process.env.SMTP_HOST.includes('YOUR_')
-    ) {
-      const cleanPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').replace(/^"|"$/g, '');
-      const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
-      const isSecure = smtpPort === 465 || process.env.SMTP_SECURE === 'true';
-
+    else if (process.env.NODE_ENV !== 'test' && cleanPass && smtpUser && !smtpHost.includes('YOUR_')) {
       const transporter = nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
         secure: isSecure,
         auth: {
-          user: process.env.SMTP_USER,
+          user: smtpUser,
           pass: cleanPass,
         },
         tls: {

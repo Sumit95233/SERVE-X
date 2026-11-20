@@ -89,11 +89,14 @@ export const createOrder = async (req, res, next) => {
       receipt,
     });
 
+    const finalDonorEmail = (donorEmail || req.user?.email || '').trim();
+    const finalDonorName = (donorName || req.user?.fullName || 'Generous Supporter').trim();
+
     const donation = await MonetaryDonation.create({
       donorId: req.user ? req.user._id : null,
-      donorName,
-      donorEmail,
-      donorPhone: donorPhone || '',
+      donorName: finalDonorName,
+      donorEmail: finalDonorEmail,
+      donorPhone: (donorPhone || '').trim(),
       ngoId: targetNgoId,
       campaignId: campaign._id,
       amount: Number(amount),
@@ -113,8 +116,8 @@ export const createOrder = async (req, res, next) => {
         donationId: donation._id,
         key: process.env.RAZORPAY_KEY_ID || 'rzp_test_ServeXPlatformKey',
         campaignTitle: campaign.title,
-        donorName,
-        donorEmail,
+        donorName: finalDonorName,
+        donorEmail: finalDonorEmail,
       },
     });
   } catch (err) {
@@ -214,10 +217,12 @@ export const verifyPayment = async (req, res, next) => {
       },
     });
 
-    // Asynchronously dispatch verified thank-you email (idempotent, never blocks client response)
-    sendDonationThankYouEmail(donation._id).catch((emailErr) => {
+    // Dispatch verified thank-you email with attached official 80G PDF receipt
+    try {
+      await sendDonationThankYouEmail(donation._id);
+    } catch (emailErr) {
       console.error('[Async Email Delivery Notice]', emailErr?.message || emailErr);
-    });
+    }
 
     res.json({
       success: true,
@@ -280,10 +285,12 @@ export const handleWebhook = async (req, res, next) => {
           $inc: { amountRaised: donation.amount, donorCount: 1 },
         });
 
-        // Asynchronously dispatch verified thank-you email
-        sendDonationThankYouEmail(donation._id).catch((emailErr) => {
+        // Dispatch verified thank-you email with attached official 80G PDF receipt
+        try {
+          await sendDonationThankYouEmail(donation._id);
+        } catch (emailErr) {
           console.error('[Webhook Async Email Notice]', emailErr?.message || emailErr);
-        });
+        }
       }
     }
 
